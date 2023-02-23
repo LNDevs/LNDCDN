@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CDN Files</title>
+    <link rel="icon" href="/images/icon.png">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+
+    <style>
+        /* Basic styling for the file list */
+        html {
+            background-color: #252525;
+            color: #fff;
+            font-family: "Roboto" !important;
+        }
+        ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        li {
+            margin: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            display: inline-block;
+            width: 200px;
+            text-align: center;
+            vertical-align: top;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Styling for folder dropdown */
+        .folder {
+            margin: 10px;
+        }
+
+        .force_font_normal {
+            font-weight: bold;
+            font-family: "Roboto" !important;
+            font-size: x-large;
+        }
+
+        .folder-name {
+            background-color: #00c0ff;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            /* make padding left and right 5 px and make it top and bottom 2px*/
+            padding: 2px 10px;
+            cursor: pointer;
+            font-family: "Material Icons";
+            border-radius:5px;
+        }
+
+        .folder-name:hover {
+            background-color: #00c0ff;
+        }
+
+        .folder-content {
+            display: none;
+        }
+
+        .show .folder-content {
+            display: block;
+        }
+
+        .folder-icon {
+            display: inline-block;
+            margin-right: 5px;
+            font-size: 20px;
+
+        }
+
+        .closed::before {
+            content: "folder";
+        }
+
+        .open::before {
+            content: "folder_open";
+        }
+    </style>
+</head>
+<body>
+<h1>CDN Files</h1>
+<button onclick="window.location.href='/upload'">Upload Files</button>
+<div id="folderList"></div>
+<ul id="fileList">
+    <!-- File list will be generated dynamically -->
+</ul>
+<script>
+    // Retrieve the list of files from the server
+    fetch('/cdn')
+        .then(response => response.json())
+        .then(data => {
+            const fileList = document.getElementById('fileList');
+            const folderList = document.getElementById('folderList');
+
+            // Create an object to store files by folder
+            const filesByFolder = {};
+            data.files.forEach(file => {
+                const folder = file.preview.split('/')[2];
+
+                if (!filesByFolder[folder]) {
+                    filesByFolder[folder] = [];
+                }
+
+                filesByFolder[folder].push(file);
+            });
+
+            // Create a dropdown area for each folder
+            Object.keys(filesByFolder).forEach(folder => {
+                const folderDiv = document.createElement('div');
+                folderDiv.classList.add('folder');
+
+                const folderName = document.createElement('div');
+                folderName.classList.add('folder-name', 'closed');
+                const name = document.createElement("p");
+                name.innerText = folder;
+                name.classList.add('force_font_normal');
+                folderName.appendChild(name);
+
+                folderName.addEventListener('click', () => {
+                    folderDiv.classList.toggle('show');
+                    folderName.classList.toggle('open');
+                    folderName.classList.toggle('closed');
+                });
+                folderDiv.appendChild(folderName);
+
+                const folderContent = document.createElement('ul');
+                folderContent.classList.add('folder-content');
+
+                filesByFolder[folder].forEach(file => {
+                    const listItem = document.createElement('li');
+
+                    var lowers = file.preview.toLowerCase();
+
+                    if (lowers.endsWith('.jpg') || lowers.endsWith('.jpeg') || lowers.endsWith('.png') || lowers.endsWith('.gif') || lowers.endsWith('.bmp')) {
+                        // If the file is an image, create a small preview
+                        const image = document.createElement('img');
+                        image.src = file.preview + '?preview=true';
+                        image.addEventListener('click', () => {
+                            window.open(file.preview);
+                        });
+                        listItem.appendChild(image);
+                    } else {
+                        // If the file is not an image, create a <a> element with a download link
+                        const link = document.createElement('a');
+                        link.href = file.preview;
+                        link.download = file.name;
+                        link.textContent = file.name;
+                        listItem.appendChild(link);
+                    }
+
+                    folderContent.appendChild(listItem);
+                });
+
+                folderDiv.appendChild(folderContent);
+                folderList.appendChild(folderDiv);
+            });
+        })
+        .catch(error => console.error(error));
+</script>
+</body>
+</html>
