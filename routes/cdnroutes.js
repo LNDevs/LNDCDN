@@ -11,7 +11,7 @@ const storage = multer.diskStorage({
         // Create a new directory or use existing one based on foldername parameter
         const folderName = req.body.foldername;
         const folderDir = path.join('./data', folderName);
-        fs.mkdirSync(folderDir, { recursive: true });
+        fs.mkdirSync(folderDir, {recursive: true});
         cb(null, folderDir);
     },
     filename: function (req, file, cb) {
@@ -20,10 +20,15 @@ const storage = multer.diskStorage({
 });
 
 // Set up multer upload
-const upload = multer({ storage: storage });
+const upload = multer({storage: storage});
 
 // Get endpoint with custom folder and file name
 router.get('/:folder/:file', function (req, res) {
+    if (req.headers.ldfs !== 'LNDEVS.UK - NEXTJS FRONTEND - 1.0.8' || req.ip !== "84.92.231.76") {
+        res.status(405).json({"response": "Disallowed"});
+        return;
+    }
+
     const dataDir = './data';
     const folderName = req.params.folder;
     const fileName = req.params.file;
@@ -42,52 +47,60 @@ router.get('/:folder/:file', function (req, res) {
 });
 
 router.get('/', function (req, res) {
+    // Check if a certain header is present
+    if (req.headers.ldfs !== 'LNDEVS.UK - NEXTJS FRONTEND - 1.0.8') {
+        res.status(405).json({"response": "Disallowed"});
+        return;
+    }
+
+
     const dataDir = './data';
     const fileTypes = /\.(jpeg|jpg|png|gif|bmp)$/i;
+
+    const folders = [];
 
     fs.readdir(dataDir, function (err, dirs) {
         if (err) {
             console.log(err);
             res.status(500).send('Error getting directories');
-            return;
-        }
 
-        const fileList = [];
+        } else {
 
-        // Iterate through each directory and add its files to the fileList
-        dirs.forEach(function (dir) {
-            const dirPath = path.join(dataDir, dir);
+            // Iterate through each directory and add its files to the fileList
+            dirs.forEach(function (dir) {
+                const dirPath = path.join(dataDir, dir);
 
-            if (fs.lstatSync(dirPath).isDirectory()) {
-                const files = fs.readdirSync(dirPath);
+                if (fs.lstatSync(dirPath).isDirectory()) {
+                    const files = fs.readdirSync(dirPath);
 
-                files
-                    .filter(function (file) {
-                        return fileTypes.test(file);
-                    })
-                    .forEach(function (file) {
-                        fileList.push({
-                            name: file,
-                            preview: `/cdn/${dir}/${file}`,
+                    const fileList = files
+                        .filter(function (file) {
+                            return fileTypes.test(file);
+                        })
+                        .map(function (file) {
+                            return {
+                                name: file,
+                                preview: `/cdn/${dir}/${file}`,
+                            };
                         });
-                    });
-            }
-        });
 
-        // Create a meta file in JSON that lists all the files in the directory
-        const metaFile = path.join(dataDir, 'meta.json');
-        fs.writeFileSync(metaFile, JSON.stringify(fileList));
+                    folders.push({name: dir, files: fileList});
+                }
+            });
 
-        console.log(`Sent ${fileList.length} files in response`);
-        res.json({ files: fileList });
+            // Create a meta file in JSON that lists all the files in the directory
+            const metaFile = path.join(dataDir, 'meta.json');
+            fs.writeFileSync(metaFile, JSON.stringify({folders}));
+
+            console.log(`Sent ${folders.length} folders in response`);
+            res.json({folders});
+        }
     });
 });
 
 router.post('/upload', upload.array('file'), function (req, res, next) {
-    // Check if login credentials are valid
     if (req.body.username.includes('admin') && req.body.password.includes('3t3rn1ty')) {
         console.log(`Received ${req.files.length} files`);
-        res.send('Files uploaded successfully!');
         res.redirect("/");
     } else {
         console.log('Invalid login credentials');
