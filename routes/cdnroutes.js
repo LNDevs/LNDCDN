@@ -24,11 +24,6 @@ const upload = multer({storage: storage});
 
 // Get endpoint with custom folder and file name
 router.get('/:folder/:file', function (req, res) {
-    if (req.headers.ldfs !== 'LNDEVS.UK - NEXTJS FRONTEND - 1.0.8' || req.ip !== "84.92.231.76") {
-        res.status(405).json({"response": "Disallowed"});
-        return;
-    }
-
     const dataDir = './data';
     const folderName = req.params.folder;
     const fileName = req.params.file;
